@@ -28,8 +28,11 @@ pub fn to_vec<T: serde::Serialize>(value: &T) -> Result<Vec<u8>, EncodeError> {
 
     to_vec(value).map(|vec| {
         if CONFIG.compress.load(Ordering::SeqCst) {
-            miniz_oxide::deflate::compress_to_vec_zlib(vec.as_slice(), 6)
+            let vec_out = miniz_oxide::deflate::compress_to_vec_zlib(vec.as_slice(), 6);
+            log::info!("compress from: {} to {}", vec.len(), vec_out.len());
+            vec_out
         } else {
+            log::info!("No compress: {}", vec.len());
             vec
         }
     })
@@ -41,6 +44,7 @@ pub fn from_slice<T: serde::de::DeserializeOwned>(slice: &[u8]) -> Result<T, Dec
     #[cfg(feature = "json")]
     use json::from_slice;
 
+    log::info!("decompress from_slice: {:?}", slice);
     match miniz_oxide::inflate::decompress_to_vec_zlib(slice) {
         Ok(vec) => from_slice(vec.as_slice()),
         Err(_) => from_slice(slice),
